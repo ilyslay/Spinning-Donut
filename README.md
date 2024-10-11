@@ -10,7 +10,7 @@
  ###  Explanation:  
 The `buffer` stores characters for each frame that will be displayed on the console. Each element in the `buffer` corresponds to a character on the screen. The `zbuffer` tracks the depth (z-axis) of each point in 3D space that will be displayed on the 2D screen. We need the z-buffer to handle the overlap of 3D points (ensuring closer points obscure farther ones).
 
-   #### Why it's tricky:  
+   ### Why it's tricky:  
    This is a low-level graphics technique to simulate 3D rendering using only ASCII characters. Each pixel in `buffer` holds the final character, and `zbuffer` ensures proper depth is maintained for each frame.
 
 ## 2. *Rotation and Perspective Transformation:*
