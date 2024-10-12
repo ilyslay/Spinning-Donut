@@ -22,6 +22,17 @@ const double R2 = 2; // Radius of the circle the ring revolves on
 const double K2 = 5; // Distance of the donut from the viewer
 const double K1 = screen_width * K2 * 3 / (8 * (R1 + R2)); // Scaling factor based on screen size
 
+// ANSI color codes for making the donut colorful
+const char* COLORS[] = {
+    "\x1b[31m",  // Red
+    "\x1b[33m",  // Yellow
+    "\x1b[32m",  // Green
+    "\x1b[36m",  // Cyan
+    "\x1b[34m",  // Blue
+    "\x1b[35m",  // Magenta
+    "\x1b[0m"    // Reset (White/Default)
+};
+
 void renderFrame() {
     // Clear buffers
     memset(buffer, ' ', buffer_size);
@@ -65,10 +76,15 @@ void renderFrame() {
         }
     }
 
-    // Print frame
-    std::cout << "\x1b[H"; // ANSI escape code for moving cursor to the top of the screen
+    // Print the frame to the console
+    std::cout << "\x1b[H";  // Move the cursor to the top-left corner
     for (int j = 0; j < buffer_size; j++) {
-        putchar(j % screen_width ? buffer[j] : '\n'); // Print each character (new line at the end of each row)
+        if (j % screen_width == 0 && j != 0) std::cout << '\n';  // New line at the end of each row
+        if (buffer[j] == '\x1b') {  // If we encounter a color code, print it as is
+            std::cout << COLORS[buffer[++j] % 7];  // Apply corresponding color
+        } else {
+            putchar(buffer[j]);  // Print character
+        }
     }
 }
 
