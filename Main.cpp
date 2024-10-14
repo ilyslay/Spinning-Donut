@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <cstring>
-#include <unistd.h> // for usleep function (Linux/Mac). On Windows, use <windows.h> with Sleep(ms)
+#include <windows.h> // For Sleep and console functions
 
 #define PI 3.14159265359
 
@@ -22,7 +22,7 @@ const double R2 = 2; // Radius of the circle the ring revolves on
 const double K2 = 5; // Distance of the donut from the viewer
 const double K1 = screen_width * K2 * 3 / (8 * (R1 + R2)); // Scaling factor based on screen size
 
-// ANSI color codes for making the donut colorful
+// ANSI color codes for Windows console (some terminals may not support all)
 const char* COLORS[] = {
     "\x1b[31m",  // Red
     "\x1b[33m",  // Yellow
@@ -32,6 +32,13 @@ const char* COLORS[] = {
     "\x1b[35m",  // Magenta
     "\x1b[0m"    // Reset (White/Default)
 };
+
+// Function to set the cursor position in the Windows console
+void setCursorPosition(int x, int y) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD pos = { (SHORT)x, (SHORT)y };
+    SetConsoleCursorPosition(hConsole, pos);
+}
 
 void renderFrame() {
     // Clear buffers
@@ -76,25 +83,26 @@ void renderFrame() {
         }
     }
 
+    // Set cursor to the top-left corner before printing the frame
+    setCursorPosition(0, 0);
+
     // Print the frame to the console
-    std::cout << "\x1b[H";  // Move the cursor to the top-left corner
     for (int j = 0; j < buffer_size; j++) {
         if (j % screen_width == 0 && j != 0) std::cout << '\n';  // New line at the end of each row
-        if (buffer[j] == '\x1b') {  // If we encounter a color code, print it as is
-            std::cout << COLORS[buffer[++j] % 7];  // Apply corresponding color
-        } else {
-            putchar(buffer[j]);  // Print character
-        }
+        putchar(buffer[j]);  // Print character
     }
 }
 
 int main() {
-    std::cout << "\x1b[2J"; // Clear screen using ANSI escape code
+    // Clear screen at the start
+    system("cls");
+
     while (true) {
         renderFrame();
         A += 0.04; // Increment rotation angle A
         B += 0.02; // Increment rotation angle B
-        usleep(30000); // Pause between frames (30 ms delay, 33 FPS)
+        Sleep(33); // Pause between frames (33 ms delay for ~30 FPS)
     }
+
     return 0;
 }
