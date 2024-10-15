@@ -1,184 +1,192 @@
-Here's a step-by-step documentation to explain the process of creating the **3D Spinning Donut** in C++. This guide breaks down each significant aspect of the code so that the logic and flow are clear.
+# **Step-by-Step Documentation with Code Explanation: Running the Rotating Donut Animation on Windows**  
+
+This guide explains how to **compile, run, and understand the rotating 3D donut animation** using C++ on a Windows machine. Follow each step closely to get the program working and learn what the code does at each stage.
 
 ---
 
-### **Step 1: Setting up Constants and Variables**
+## **Prerequisites**  
+1. **Windows OS** (with Command Prompt or PowerShell).  
+2. **C++ Compiler** (e.g., **MinGW**, **GCC**, or **Visual Studio**).  
+3. **Text Editor or IDE** (e.g., Visual Studio Code, Notepad++, Visual Studio).  
 
-#### Code:
+---
+
+## **Step 1: Install a C++ Compiler (MinGW)**  
+If you don’t have a C++ compiler installed:  
+1. **Download MinGW** from [MinGW Download](https://sourceforge.net/projects/mingw/).  
+2. Install it, selecting the **C++ compiler** during setup.  
+3. Add **MinGW’s `bin` directory** to your PATH:  
+   - Example: `C:\MinGW\bin`  
+   - Go to **Control Panel** → **System** → **Advanced System Settings** → **Environment Variables**.  
+   - Under **System Variables**, find `Path`, click **Edit**, and add `C:\MinGW\bin`.
+
+4. Verify the installation:
+   ```bash
+   g++ --version
+   ```
+   If installed correctly, the terminal will show the compiler version.
+
+---
+
+## **Step 2: Create the C++ Source File**  
+1. Open your text editor or IDE.  
+2. **Copy the code** into a new file named `donut.cpp`.  
+
+### **Code Breakdown and Explanation**
+
 ```cpp
-#define PI 3.14159265359
-double A = 0, B = 0; // Rotation angles
+#include <iostream>      // For input/output operations
+#include <cmath>         // For mathematical functions like sin, cos
+#include <cstring>       // For memset() function to reset buffers
+#include <windows.h>     // For Sleep() and console functions
+
+#define PI 3.14159265359  // Define PI for calculations
+```
+- We **include necessary libraries**. `<windows.h>` is used for console operations like clearing the screen and pausing between frames using `Sleep()`.
+
+---
+
+### **Screen and Buffer Setup**
+```cpp
 const int screen_width = 80;
 const int screen_height = 22;
-char buffer[buffer_size]; 
-float zbuffer[buffer_size];
-const double theta_spacing = 0.07;
-const double phi_spacing = 0.02;
-const double R1 = 1, R2 = 2, K2 = 5;
-const double K1 = screen_width * K2 * 3 / (8 * (R1 + R2));
-```
+const int buffer_size = screen_width * screen_height;
 
-#### Explanation:
-- **A and B**: These are rotation angles for the donut around two different axes. They increment over time to make the donut spin.
-- **Screen dimensions**: `screen_width` and `screen_height` define the size of the ASCII output.
-- **Buffer arrays**: `buffer` stores the ASCII characters for each frame, while `zbuffer` holds depth information to ensure proper rendering of 3D objects.
-- **Spacing values**: `theta_spacing` and `phi_spacing` control the resolution of the donut by setting the increments for two angles (`theta` and `phi`).
-- **Donut radii**: `R1` is the radius of the small ring, and `R2` is the distance from the center of the donut to the center of the ring.
-- **Projection scaling**: `K1` is a constant used to scale the donut's 3D coordinates into 2D space for proper rendering.
+char buffer[buffer_size];      // Frame buffer to store characters for display
+float zbuffer[buffer_size];    // Depth buffer to track visibility of points
+```
+- We define the **console dimensions** (80x22) and **allocate memory buffers** to store the characters (`buffer`) and depth values (`zbuffer`).  
+- **zbuffer** ensures that only the closest surface points are visible.
 
 ---
 
-### **Step 2: Clearing Buffers**
-
-#### Code:
+### **Donut Geometry Parameters**
 ```cpp
-memset(buffer, ' ', buffer_size);
-memset(zbuffer, 0, buffer_size * sizeof(float));
+const double R1 = 1;   // Radius of the inner circle (donut ring)
+const double R2 = 2;   // Radius of the outer circle (the path of rotation)
+const double K2 = 5;   // Distance of the donut from the viewer
+const double K1 = screen_width * K2 * 3 / (8 * (R1 + R2));  // Scaling factor
 ```
-
-#### Explanation:
-- Before rendering each frame, the `buffer` is filled with spaces (i.e., the empty background), and the `zbuffer` is reset to 0.
-- This ensures that each new frame starts fresh, with nothing drawn, and that depth calculations will work correctly.
+- **`R1` and `R2`** define the donut’s shape.  
+- **`K2`** is the distance between the donut and the camera (viewer).  
+- **`K1`** helps scale the 3D object to fit the 2D screen.
 
 ---
 
-### **Step 3: Looping Through Angles Theta and Phi**
-
-#### Code:
+## **Step 3: Implement the Render Logic**
+### **Cursor Position Function**
 ```cpp
-for (double theta = 0; theta < 2 * PI; theta += theta_spacing) {
-    for (double phi = 0; phi < 2 * PI; phi += phi_spacing) {
+void setCursorPosition(int x, int y) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD pos = { (SHORT)x, (SHORT)y };
+    SetConsoleCursorPosition(hConsole, pos);
+}
 ```
-
-#### Explanation:
-- **Theta and Phi** represent two angles in the torus (donut) model. `Theta` is for the rotation around the ring, and `Phi` is for the rotation around the donut's center.
-- The code iterates through these angles to generate the 3D points on the surface of the donut. Increasing `theta_spacing` and `phi_spacing` would result in lower resolution but faster rendering.
+- This function **positions the cursor** at `(x, y)` to print the next frame at the top of the console (without flickering).
 
 ---
 
-### **Step 4: Calculate 3D Coordinates of the Donut**
-
-#### Code:
+### **Rendering a Single Frame**
 ```cpp
-double circleX = R2 + R1 * cosTheta;
-double circleY = R1 * sinTheta;
-```
+void renderFrame() {
+    memset(buffer, ' ', buffer_size);  // Clear frame buffer
+    memset(zbuffer, 0, buffer_size * sizeof(float));  // Reset depth buffer
 
-#### Explanation:
-- For every combination of `theta` and `phi`, the code calculates the 3D coordinates (`x`, `y`, `z`) of points on the surface of the donut.
-- The `circleX` and `circleY` represent the points on the 2D cross-section of the donut (the small ring) before applying any rotation. The circle is defined by trigonometric functions (`cosTheta` and `sinTheta`).
+    // Loop through angles theta and phi to generate the 3D points
+    for (double theta = 0; theta < 2 * PI; theta += 0.07) {
+        for (double phi = 0; phi < 2 * PI; phi += 0.02) {
+```
+- **`theta` and `phi`** are angles used to **draw the donut in 3D space**.  
+- **`memset()`** resets the frame buffer and depth buffer for every frame.
+
+```cpp
+            double cosA = cos(A), sinA = sin(A);
+            double cosB = cos(B), sinB = sin(B);
+            double cosTheta = cos(theta), sinTheta = sin(theta);
+            double cosPhi = cos(phi), sinPhi = sin(phi);
+```
+- We **precompute trigonometric values** to rotate the donut smoothly.
 
 ---
 
-### **Step 5: Apply Rotation to 3D Points**
-
-#### Code:
+### **3D Point Calculations and Rotation**
 ```cpp
-double x = circleX * (cosB * cosPhi + sinA * sinB * sinPhi) - circleY * cosA * sinB;
-double y = circleX * (sinB * cosPhi - sinA * cosB * sinPhi) + circleY * cosA * cosB;
-double z = K2 + cosA * circleX * sinPhi + circleY * sinA;
-```
+            double circleX = R2 + R1 * cosTheta;
+            double circleY = R1 * sinTheta;
 
-#### Explanation:
-- These equations rotate the 3D point (`circleX`, `circleY`, `z`) in space around two axes (`A` and `B`).
-- The trigonometric functions of `A` (rotation around the X-axis) and `B` (rotation around the Z-axis) apply the rotation to the donut in 3D space.
-- This is the step that makes the donut "spin" by changing its position in 3D as `A` and `B` increment in each frame.
+            double x = circleX * (cosB * cosPhi + sinA * sinB * sinPhi) - circleY * cosA * sinB;
+            double y = circleX * (sinB * cosPhi - sinA * cosB * sinPhi) + circleY * cosA * cosB;
+            double z = K2 + cosA * circleX * sinPhi + circleY * sinA;
+            double ooz = 1 / z;  // Perspective (1/z)
+```
+- The donut is rotated around **two axes** using trigonometric functions.
 
 ---
 
-### **Step 6: Perform Perspective Projection**
-
-#### Code:
+### **Screen Projection and Rendering**
 ```cpp
-double ooz = 1 / z;
-int xp = (int)(screen_width / 2 + K1 * ooz * x);
-int yp = (int)(screen_height / 2 - K1 * ooz * y);
-```
+            int xp = (int)(screen_width / 2 + K1 * ooz * x);
+            int yp = (int)(screen_height / 2 - K1 * ooz * y);
 
-#### Explanation:
-- **`ooz` (1 / z)**: This gives a simple perspective effect. As `z` increases (objects move farther away), the points get smaller.
-- **2D Screen coordinates** (`xp`, `yp`): These map the 3D points onto the 2D console. The donut’s 3D position is scaled and translated to fit within the screen's width and height.
+            double L = cosPhi * cosTheta * sinB - cosA * cosTheta * sinPhi - 
+                       sinA * sinTheta + cosB * (cosA * sinTheta - cosTheta * sinA * sinPhi);
+```
+- The `(x, y, z)` coordinates are **projected onto the 2D screen**.  
+- **`L`** calculates the brightness of each point based on lighting.
 
 ---
 
-### **Step 7: Calculate Surface Brightness**
-
-#### Code:
+### **Update Buffers and Display the Frame**
 ```cpp
-double L = cosPhi * cosTheta * sinB - cosA * cosTheta * sinPhi - sinA * sinTheta + cosB * (cosA * sinTheta - cosTheta * sinA * sinPhi);
-```
+            if (L > 0 && xp >= 0 && xp < screen_width && yp >= 0 && yp < screen_height) {
+                int idx = xp + screen_width * yp;
+                if (ooz > zbuffer[idx]) {  // Check if the point is closer
+                    zbuffer[idx] = ooz;
+                    buffer[idx] = ".,-~:;=!*#$@"[(int)(L * 8)];  // Brightness to character
+                }
+            }
+        }
+    }
 
-#### Explanation:
-- This calculates the brightness `L` of each point based on the angle between the light source and the surface of the donut.
-- The lighting equation combines multiple trigonometric terms to simulate how light interacts with the donut’s surface.
+    setCursorPosition(0, 0);  // Reset cursor to top-left
 
----
-
-### **Step 8: Depth Buffering and Character Selection**
-
-#### Code:
-```cpp
-if (L > 0 && xp >= 0 && xp < screen_width && yp >= 0 && yp < screen_height) {
-    int idx = xp + screen_width * yp;
-    if (ooz > zbuffer[idx]) {
-        zbuffer[idx] = ooz;
-        int luminance_index = L * 8;
-        buffer[idx] = ".,-~:;=!*#$@"[luminance_index];
+    for (int j = 0; j < buffer_size; j++) {
+        if (j % screen_width == 0) std::cout << '\n';  // Newline at row end
+        putchar(buffer[j]);  // Print each character
     }
 }
 ```
-
-#### Explanation:
-- **Depth Buffer Check**: This ensures that only the closest (nearest) points on the donut are rendered by comparing the `ooz` (inverse of `z`) value to the `zbuffer`. If the current point is closer than the previous point in that location, it updates the `zbuffer` and draws that point.
-- **Character Selection**: Based on the brightness `L`, a corresponding character from the string `.,-~:;=!*#$@` is chosen. Brighter points are rendered with characters like `#`, while darker ones use `.` or `,` to simulate shading.
+- **`zbuffer` ensures the closest points are rendered**.  
+- **Characters like '.', '~', and '@'** are used to represent different brightness levels.
 
 ---
 
-### **Step 9: Output the Frame**
-
-#### Code:
-```cpp
-std::cout << "\x1b[H"; // Move cursor to top-left corner
-for (int j = 0; j < buffer_size; j++) {
-    putchar(j % screen_width ? buffer[j] : '\n');
-}
-```
-
-#### Explanation:
-- **ANSI Escape Codes**: The `\x1b[H` escape sequence moves the cursor back to the top-left corner of the terminal, which prevents the program from scrolling and makes the donut animation appear in-place.
-- **Printing the Frame**: The characters stored in the `buffer` are printed row by row. `putchar(j % screen_width ? buffer[j] : '\n')` ensures that a newline is inserted at the end of each row to maintain the correct shape of the frame.
+## **Step 4: Compile the Code**
+1. Open **Command Prompt** and navigate to the folder where `donut.cpp` is saved:
+   ```bash
+   cd C:\path\to\your\file
+   ```
+2. Compile the program:
+   ```bash
+   g++ donut.cpp -o donut.exe
+   ```
 
 ---
 
-### **Step 10: Increment Rotation Angles and Loop**
-
-#### Code:
-```cpp
-A += 0.04;
-B += 0.02;
-usleep(30000);
-```
-
-#### Explanation:
-- The angles `A` and `B` are incremented after every frame, causing the donut to rotate around two axes.
-- The `usleep(30000)` introduces a 30 ms delay between frames, which creates the animation effect at ~33 frames per second (FPS).
+## **Step 5: Run the Program**
+1. In the same Command Prompt window, run:
+   ```bash
+   donut.exe
+   ```
+2. You should see the **rotating 3D donut animation** in your console.
 
 ---
 
-### **Step 11: Main Loop**
-
-#### Code:
-```cpp
-while (true) {
-    renderFrame();
-}
-```
-
-#### Explanation:
-- The entire process of rendering each frame, rotating the donut, and updating the screen is repeated in an infinite loop, continuously animating the spinning donut until the program is stopped.
+## **Step 6: Troubleshooting**
+- If there’s a compilation error, ensure **MinGW is installed** correctly and added to PATH.
+- If the console flickers, try running the code in **Command Prompt**, not PowerShell.
 
 ---
 
-### Conclusion:
-
-This spinning 3D donut project is a great example of how basic mathematical concepts (trigonometry, 3D transformations, perspective projection, and depth buffering) can be used to create visual effects in a text-based environment. The program manipulates the position of each point on the donut and calculates shading based on the angle of light, giving the illusion of 3D in a 2D ASCII art form.
+## **Conclusion**
+By following this guide, you’ve successfully **compiled, run, and understood** the rotating 3D donut animation. Explore the code by adjusting values (like rotation speed or screen size) for fun experiments!
